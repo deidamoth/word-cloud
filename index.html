@@ -2,24 +2,29 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=5, user-scalable=yes">
   <title>Word Cloud</title>
   <style>
     html, body {
       margin: 0;
       background: #fff;
+      min-height: 100dvh;
+    }
+    body {
       display: flex;
       justify-content: center;
       align-items: center;
-      min-height: 100vh;
+      box-sizing: border-box;
+      padding: 28px;
     }
     canvas {
       display: block;
+      touch-action: pan-x pan-y pinch-zoom;
     }
     @media (max-width: 700px) {
-      canvas {
-        width: 72vw !important;
-        height: auto !important;
+      body {
+        padding: 14px;
+        min-height: 100dvh;
       }
     }
   </style>
@@ -36,6 +41,8 @@ const jsonpUrl =
   '/gviz/tq?tqx=responseHandler:parseGoogleData&gid=' +
   gid;
 
+const MIN_FONT = 28;
+
 const y2kColors = [
   [255, 51, 204],
   [0, 229, 255],
@@ -50,8 +57,21 @@ let wordList = [];
 let placedWords = [];
 let dataLoaded = false;
 
+function outerPad() {
+  return windowWidth < 700 ? 14 : 28;
+}
+
+function makeCanvas() {
+  let pad = outerPad() * 2;
+  let w = max(280, windowWidth - pad);
+  let h = max(320, windowHeight - pad);
+  return { w: w, h: h };
+}
+
 function setup() {
-  createCanvas(800, 600);
+  let s = makeCanvas();
+  let cnv = createCanvas(s.w, s.h);
+  cnv.style('touch-action', 'pan-x pan-y pinch-zoom');
   textAlign(CENTER, CENTER);
   textFont('Comic Sans MS');
   angleMode(DEGREES);
@@ -59,6 +79,21 @@ function setup() {
 
   let scriptTag = createElement('script');
   scriptTag.attribute('src', jsonpUrl);
+}
+
+function windowResized() {
+  let s = makeCanvas();
+  resizeCanvas(s.w, s.h);
+  placedWords = [];
+  if (dataLoaded) redraw();
+}
+
+function touchStarted() {
+  return true;
+}
+
+function touchMoved() {
+  return true;
 }
 
 function isHeaderCell(text) {
@@ -77,22 +112,23 @@ function layoutWords() {
   let minFreq = wordList[wordList.length - 1].count;
   let maxFreq = wordList[0].count;
   let pad = 14;
+  let sizeScale = min(width, height) / 560;
 
   for (let i = 0; i < wordList.length; i++) {
     let wordObj = wordList[i];
-    let fontSize = 28;
+    let fontSize = max(MIN_FONT, 28 * sizeScale);
     if (maxFreq !== minFreq) {
-      fontSize = map(wordObj.count, minFreq, maxFreq, 20, 72, true);
+      fontSize = max(MIN_FONT, map(wordObj.count, minFreq, maxFreq, 28, 84, true) * sizeScale);
     }
 
     let placed = false;
     for (let shrink = 0; shrink < 8 && !placed; shrink++) {
-      let size = fontSize * pow(0.85, shrink);
+      let size = max(MIN_FONT, fontSize * pow(0.85, shrink));
       textSize(size);
       let boxW = textWidth(wordObj.text) + pad;
       let boxH = size * 0.95 + pad;
-      let marginX = boxW / 2 + 28;
-      let marginY = boxH / 2 + 28;
+      let marginX = boxW / 2 + 36;
+      let marginY = boxH / 2 + 36;
 
       for (let attempt = 0; attempt < 250; attempt++) {
         let x = random(marginX, width - marginX);
