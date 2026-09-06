@@ -198,18 +198,12 @@ window.parseGoogleData = function (jsonData) {
         let cellText = cells[c].v.toString().toLowerCase();
         if (isHeaderCell(cellText)) continue;
 
-        let cleanWords = cellText.match(/\b[a-z']+\b/g);
+        let words = cellText.match(/\b[a-z']+\b/g);
+        if (!words || words.length === 0) continue;
 
-        if (cleanWords) {
-          for (let word of cleanWords) {
-            if (
-              word.length > 2 &&
-              !['the', 'and', 'for', 'you', 'with', 'this', 'that', 'your'].includes(word)
-            ) {
-              wordCounts[word] = (wordCounts[word] || 0) + 1;
-            }
-          }
-        }
+        let phrase = words.slice(0, 5).join(' ');
+        if (phrase.length < 3) continue;
+        wordCounts[phrase] = (wordCounts[phrase] || 0) + 1;
       }
     }
   }
