@@ -17,6 +17,12 @@
       box-sizing: border-box;
       padding: 28px;
     }
+    @font-face {
+      font-family: 'Comic Neue';
+      src: url('ComicNeue-Bold.ttf') format('truetype');
+      font-weight: 700;
+      font-style: normal;
+    }
     canvas {
       display: block;
       touch-action: pan-x pan-y pinch-zoom;
@@ -56,6 +62,11 @@ let wordCounts = {};
 let wordList = [];
 let placedWords = [];
 let dataLoaded = false;
+let comicFont;
+
+function preload() {
+  comicFont = loadFont('ComicNeue-Bold.ttf');
+}
 
 function outerPad() {
   return windowWidth < 700 ? 14 : 28;
@@ -73,7 +84,7 @@ function setup() {
   let cnv = createCanvas(s.w, s.h);
   cnv.style('touch-action', 'pan-x pan-y pinch-zoom');
   textAlign(CENTER, CENTER);
-  textFont('Comic Sans MS');
+  textFont(comicFont);
   angleMode(DEGREES);
   noLoop();
 
