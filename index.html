@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Word Cloud</title>
+  <style>
+    html, body {
+      margin: 0;
+      background: #fff;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+    }
+    canvas {
+      display: block;
+    }
+  </style>
+  <script src="https://cdn.jsdelivr.net/npm/p5@2.3.1/lib/p5.min.js"></script>
+</head>
+<body>
+<script>
+const sheetId = '1duz-zm1y4HV0QahYJFuN6wmy_XZJnLSc2NUcahou0Ac';
+const gid = '1118125670';
+
+const jsonpUrl =
+  'https://docs.google.com/spreadsheets/d/' +
+  sheetId +
+  '/gviz/tq?tqx=responseHandler:parseGoogleData&gid=' +
+  gid;
+
+const y2kColors = [
+  [255, 51, 204],
+  [0, 229, 255],
+  [199, 125, 255],
+  [255, 105, 180],
+  [0, 180, 255],
+  [180, 180, 210]
+];
+
+let wordCounts = {};
+let wordList = [];
+let placedWords = [];
+let dataLoaded = false;
+
+function setup() {
+  createCanvas(800, 600);
+  textAlign(CENTER, CENTER);
+  textFont('Comic Sans MS');
+  angleMode(DEGREES);
+  noLoop();
+
+  let scriptTag = createElement('script');
+  scriptTag.attribute('src', jsonpUrl);
+}
+
+function isHeaderCell(text) {
+  let t = text.trim().toLowerCase();
+  return t === 'timestamp' || /^column\s*\d+$/.test(t);
+}
+
+function boxesOverlap(a, b) {
+  return abs(a.x - b.x) < (a.w + b.w) / 2 && abs(a.y - b.y) < (a.h + b.h) / 2;
+}
+
+function layoutWords() {
+  placedWords = [];
+  if (wordList.length === 0) return;
+
+  let minFreq = wordList[wordList.length - 1].count;
+  let maxFreq = wordList[0].count;
+  let pad = 14;
+
+  for (let i = 0; i < wordList.length; i++) {
+    let wordObj = wordList[i];
+    let fontSize = 28;
+    if (maxFreq !== minFreq) {
+      fontSize = map(wordObj.count, minFreq, maxFreq, 20, 72, true);
+    }
+
+    let placed = false;
+    for (let shrink = 0; shrink < 8 && !placed; shrink++) {
+      let size = fontSize * pow(0.85, shrink);
+      textSize(size);
+      let boxW = textWidth(wordObj.text) + pad;
+      let boxH = size * 0.95 + pad;
+      let marginX = boxW / 2 + 28;
+      let marginY = boxH / 2 + 28;
+
+      for (let attempt = 0; attempt < 250; attempt++) {
+        let x = random(marginX, width - marginX);
+        let y = random(marginY, height - marginY);
+        let box = { x: x, y: y, w: boxW, h: boxH };
+        let hit = false;
+        for (let p = 0; p < placedWords.length; p++) {
+          if (boxesOverlap(box, placedWords[p])) {
+            hit = true;
+            break;
+          }
+        }
+        if (!hit) {
+          placedWords.push({
+            text: wordObj.text,
+            x: x,
+            y: y,
+            w: boxW,
+            h: boxH,
+            size: size,
+            col: y2kColors[i % y2kColors.length]
+          });
+          placed = true;
+          break;
+        }
+      }
+    }
+  }
+}
+
+window.parseGoogleData = function (jsonData) {
+  wordCounts = {};
+  wordList = [];
+  placedWords = [];
+
+  if (!jsonData || !jsonData.table || !jsonData.table.rows) {
+    dataLoaded = true;
+    redraw();
+    return;
+  }
+
+  let rows = jsonData.table.rows;
+
+  for (let r = 0; r < rows.length; r++) {
+    let cells = rows[r].c;
+    if (!cells) continue;
+
+    for (let c = 1; c < cells.length; c++) {
+      if (cells[c] && cells[c].v !== null && cells[c].v !== undefined) {
+        let cellText = cells[c].v.toString().toLowerCase();
+        if (isHeaderCell(cellText)) continue;
+
+        let cleanWords = cellText.match(/\b[a-z']+\b/g);
+
+        if (cleanWords) {
+          for (let word of cleanWords) {
+            if (
+              word.length > 2 &&
+              !['the', 'and', 'for', 'you', 'with', 'this', 'that', 'your'].includes(word)
+            ) {
+              wordCounts[word] = (wordCounts[word] || 0) + 1;
+            }
+          }
+        }
+      }
+    }
+  }
+
+  for (let word in wordCounts) {
+    wordList.push({ text: word, count: wordCounts[word] });
+  }
+
+  wordList.sort((a, b) => b.count - a.count);
+  wordList = wordList.slice(0, 60);
+
+  dataLoaded = true;
+  redraw();
+};
+
+function drawStar(x, y, size, col) {
+  push();
+  translate(x, y);
+  noStroke();
+  fill(col[0], col[1], col[2], 180);
+  beginShape();
+  for (let i = 0; i < 8; i++) {
+    let r = i % 2 === 0 ? size : size * 0.35;
+    vertex(cos(i * 45) * r, sin(i * 45) * r);
+  }
+  endShape(CLOSE);
+  pop();
+}
+
+function drawHeart(x, y, size, col) {
+  push();
+  translate(x, y);
+  noStroke();
+  fill(col[0], col[1], col[2], 160);
+  circle(-size * 0.22, -size * 0.12, size * 0.5);
+  circle(size * 0.22, -size * 0.12, size * 0.5);
+  triangle(-size * 0.48, 0, size * 0.48, 0, 0, size * 0.55);
+  pop();
+}
+
+function draw() {
+  background(255);
+
+  if (!dataLoaded) {
+    textSize(20);
+    fill(255, 51, 204);
+    stroke(0, 229, 255);
+    strokeWeight(2);
+    text('Loading word cloud data from Google Sheets...', width / 2, height / 2);
+    return;
+  }
+
+  if (wordList.length === 0) {
+    textSize(20);
+    fill(255, 51, 204);
+    stroke(0, 229, 255);
+    strokeWeight(2);
+    text('No responses found in your sheet yet.', width / 2, height / 2);
+    return;
+  }
+
+  if (placedWords.length === 0) {
+    layoutWords();
+  }
+
+  for (let i = 0; i < 28; i++) {
+    let sparkleCol = random(1) > 0.5 ? [255, 51, 204] : [0, 229, 255];
+    if (random(1) > 0.7) {
+      drawHeart(random(40, width - 40), random(40, height - 40), random(6, 12), sparkleCol);
+    } else {
+      drawStar(random(40, width - 40), random(40, height - 40), random(5, 11), sparkleCol);
+    }
+  }
+
+  noFill();
+  stroke(0, 229, 255, 90);
+  strokeWeight(6);
+  rect(10, 10, width - 20, height - 20, 18);
+  stroke(255, 51, 204, 80);
+  strokeWeight(2);
+  rect(18, 18, width - 36, height - 36, 14);
+
+  for (let i = 0; i < placedWords.length; i++) {
+    let w = placedWords[i];
+    textSize(w.size);
+
+    noStroke();
+    fill(180, 180, 200, 90);
+    text(w.text, w.x + 3, w.y + 4);
+
+    stroke(255);
+    strokeWeight(6);
+    fill(w.col[0], w.col[1], w.col[2]);
+    text(w.text, w.x, w.y);
+
+    stroke(20);
+    strokeWeight(1.5);
+    fill(w.col[0], w.col[1], w.col[2]);
+    text(w.text, w.x, w.y);
+  }
+}
+</script>
+</body>
+</html>
