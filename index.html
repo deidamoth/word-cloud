@@ -4,6 +4,9 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=5, user-scalable=yes">
   <title>Word Cloud</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Comic+Neue:wght@700&display=swap" rel="stylesheet">
   <style>
     html, body {
       margin: 0;
@@ -62,11 +65,6 @@ let wordCounts = {};
 let wordList = [];
 let placedWords = [];
 let dataLoaded = false;
-let comicFont;
-
-function preload() {
-  comicFont = loadFont('ComicNeue-Bold.ttf');
-}
 
 function outerPad() {
   return windowWidth < 700 ? 14 : 28;
@@ -84,12 +82,20 @@ function setup() {
   let cnv = createCanvas(s.w, s.h);
   cnv.style('touch-action', 'pan-x pan-y pinch-zoom');
   textAlign(CENTER, CENTER);
-  textFont(comicFont);
+  textFont('Comic Neue');
   angleMode(DEGREES);
   noLoop();
 
   let scriptTag = createElement('script');
   scriptTag.attribute('src', jsonpUrl);
+
+  if (document.fonts && document.fonts.ready) {
+    document.fonts.ready.then(function () {
+      textFont('Comic Neue');
+      placedWords = [];
+      redraw();
+    });
+  }
 }
 
 function windowResized() {
